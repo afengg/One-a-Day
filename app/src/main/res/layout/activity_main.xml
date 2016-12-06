@@ -25,4 +25,10 @@
         android:layout_height="wrap_content"
         android:layout_below="@id/text_view"
         android:text="delete!" />
+    <Button android:id="@+id/button_save_image"
+        android:layout_toRightOf="@id/button_delete_image"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/text_view"
+        android:text="save!" />
 </RelativeLayout>

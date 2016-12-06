@@ -1,6 +1,7 @@
 package afengg.oneaday;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
@@ -17,6 +18,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import java.io.File;
+import java.util.Date;
 
 public class MainActivity extends AppCompatActivity implements ActivityCompat.OnRequestPermissionsResultCallback {
 
@@ -29,22 +31,65 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        /*Get sharedpreferences value of counter
-        Counter represents number of images to skip.
-        Counter will default to value of 0 in the case that it does not exist in sharedpref
-        */
         setContentView(R.layout.activity_main);
         checkPermissionsForShowImage();
-
-        Button b = (Button) findViewById(R.id.button_delete_image);
-        b.setOnClickListener(new View.OnClickListener() {
+        // The following line should be commented out while under development
+        // checkIfDailyLimitExceeded();
+        Button delImage = (Button) findViewById(R.id.button_delete_image);
+        delImage.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view){
                 checkPermissionsForDeleteImage();
+                transitionToEnd();
+            }
+        });
+
+        Button saveImage = (Button) findViewById(R.id.button_save_image);
+        saveImage.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view){
+                incrementCounter();
+                transitionToEnd();
             }
         });
 
     }
+
+    private void incrementCounter(){
+        // Update the counter in order to skip the current image next time
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        int counter = prefs.getInt("counter",0);
+        counter++;
+        SharedPreferences.Editor edit = prefs.edit();
+        edit.putInt("counter", counter);
+        edit.commit();
+    }
+
+    private void checkIfDailyLimitExceeded(){
+        Date currDate = new Date();
+        // Convert to long to store in SharedPrefs
+        Long currDateLong = currDate.getTime();
+        //Retrieve the last date this app was opened, stored in SharedPref
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        Long prevDateLong = prefs.getLong("lastVisited",0);
+        //Subtract the two dates and check if greater than 24 hours measured in milliseconds
+        //             milli  min  hr   day
+        long hours24 = 1000 * 60 * 60 * 24;
+
+        if(currDateLong - prevDateLong < hours24 ){
+            // Go to end activity
+            transitionToEnd();
+        }
+        else{
+            // Else, update the last visited time to the current time
+            // and allow user to proceed
+            SharedPreferences.Editor edit = prefs.edit();
+            edit.putLong("lastVisited",currDateLong);
+            edit.commit();
+        }
+
+    }
+
 
     private void deleteImage(){
         TextView textView = (TextView) findViewById(R.id.text_view);
@@ -54,6 +99,12 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
             f.delete();
             textView.setText("Deleted!");
         }
+    }
+
+    private void transitionToEnd(){
+        Intent intent = new Intent(this, EndActivity.class);
+        finish();
+        startActivity(intent);
     }
 
     private void checkPermissionsForDeleteImage(){
@@ -75,8 +126,12 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
         }
     }
     private void showOneADay(){
+            /*Get sharedpreferences value of counter
+            Counter represents number of images to skip.
+            Counter will default to value of 0 in the case that it does not exist in sharedpref
+            */
             SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-            prefs.getInt("counter",0);
+            int counter = prefs.getInt("counter",0);
             //Order images in internal storage by date taken
             String [] columns = {MediaStore.Images.Media.DATA, MediaStore.Images.ImageColumns.DATE_TAKEN};
             String orderBy = MediaStore.Images.ImageColumns.DATE_TAKEN + " ASC";
@@ -86,6 +141,15 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
                     null,
                     orderBy);
             if (cursor != null && cursor.moveToFirst() ) {
+                // Check if there are less images than our counter has counted
+                // if so, set counter to 0 and restart
+                if(cursor.getCount() < counter){
+                    // fill ths in later
+                }
+                // Else, we move our cursor to the next unseen image
+                else{
+                    cursor.moveToPosition(counter);
+                }
                 int columnIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
                 String photoPath = cursor.getString(columnIndex);
                 TextView textView = (TextView) findViewById(R.id.text_view);
