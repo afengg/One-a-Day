@@ -34,7 +34,7 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
         setContentView(R.layout.activity_main);
         checkPermissionsForShowImage();
         // The following line should be commented out while under development
-        // checkIfDailyLimitExceeded();
+        checkIfDailyLimitExceeded();
         Button delImage = (Button) findViewById(R.id.button_delete_image);
         delImage.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -103,6 +103,9 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
 
     private void transitionToEnd(){
         Intent intent = new Intent(this, EndActivity.class);
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        int counter = prefs.getInt("counter", 0);
+        intent.putExtra("counter", counter);
         finish();
         startActivity(intent);
     }
@@ -144,7 +147,9 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
                 // Check if there are less images than our counter has counted
                 // if so, set counter to 0 and restart
                 if(cursor.getCount() < counter){
-                    // fill ths in later
+                    SharedPreferences.Editor edit = prefs.edit();
+                    edit.putInt("counter", 0);
+                    edit.commit();
                 }
                 // Else, we move our cursor to the next unseen image
                 else{
